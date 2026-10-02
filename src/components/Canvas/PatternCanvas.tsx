@@ -24,7 +24,7 @@ export function PatternCanvas() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw pattern
-    drawPattern(ctx, canvas.width, canvas.height, config);
+    drawPattern(ctx, canvas.width, config);
   }, [config]);
 
   return (
@@ -38,12 +38,11 @@ export function PatternCanvas() {
 function drawPattern(
   ctx: CanvasRenderingContext2D,
   width: number,
-  height: number,
   config: PatternConfig
 ) {
-  const cellSize = 40 * config.scale;
-  const cols = Math.ceil(width / cellSize);
-  const rows = Math.ceil(height / cellSize);
+  const cellSize = (width / config.gridMultiply) * (config.scale / 2);
+  const cols = config.gridMultiply;
+  const rows = config.gridMultiply;
 
   ctx.strokeStyle = config.shapeColor;
   ctx.lineWidth = 2;
