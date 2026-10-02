@@ -1,9 +1,12 @@
+import { useRef } from 'react';
 import { PatternCanvas } from './components/Canvas/PatternCanvas';
 import { ShapeSelector } from './components/Controls/ShapeSelector';
 import { Slider } from './components/Controls/Slider';
+import { ExportControls } from './components/Controls/ExportControls';
 import { usePatternStore } from './store/patternStore';
 
 export default function App() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { gridMultiply, rotation, scale, updateConfig } = usePatternStore();
 
   return (
@@ -13,7 +16,6 @@ export default function App() {
         <h1 className="text-3xl font-bold">Pattern Generator</h1>
         <p className="text-gray-400 text-sm mt-1">Create procedural textures and patterns</p>
       </div>
-    
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden gap-6 p-6" style={{ display: 'flex', flexDirection: 'row' }}>
@@ -48,8 +50,9 @@ export default function App() {
         </div>
 
         {/* Canvas Preview */}
-        <div className="flex-1 bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
-          <PatternCanvas />
+        <div className="flex-1 bg-gray-800 rounded-lg overflow-hidden border border-gray-700 flex flex-col">
+          <PatternCanvas canvasRef={canvasRef} />
+          <ExportControls canvasRef={canvasRef} />
         </div>
       </div>
     </div>

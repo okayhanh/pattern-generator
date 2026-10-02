@@ -1,11 +1,14 @@
 //This is where the actual pattern drawing happens.
  
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { usePatternStore } from '../../store/patternStore';
 import type { PatternConfig } from '../../types/pattern';
 
-export function PatternCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+interface PatternCanvasProps {
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+}
+
+export function PatternCanvas({ canvasRef }: PatternCanvasProps) {
   const config = usePatternStore();
 
   useEffect(() => {
@@ -14,6 +17,8 @@ export function PatternCanvas() {
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // ... rest of the code stays the same
 
     // Set canvas size
     canvas.width = 800;
@@ -25,7 +30,7 @@ export function PatternCanvas() {
 
     // Draw pattern
     drawPattern(ctx, canvas.width, config);
-  }, [config]);
+  }, [config, canvasRef]);
 
   return (
     <canvas
