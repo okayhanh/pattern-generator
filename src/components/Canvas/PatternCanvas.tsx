@@ -1,122 +1,60 @@
-//This is where the actual pattern drawing happens.
- 
-import { useEffect } from 'react';
+// The on-screen preview of the pattern. The drawing itself lives in utils/renderPattern.ts.
+
+import { useEffect, useRef, useState } from 'react';
 import { usePatternStore } from '../../store/patternStore';
-import type { PatternConfig } from '../../types/pattern';
+import { renderPattern } from '../../utils/renderPattern';
 
-interface PatternCanvasProps {
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
-}
+// Gray checkerboard shown behind the canvas so transparent areas are visible.
+// It's CSS on the page only, so it never ends up in the downloaded PNG.
+// It goes on the wrapper div, because Chrome doesn't paint gradients on the canvas element itself.
+const CHECKERBOARD = 'repeating-conic-gradient(#808080 0% 25%, #b0b0b0 0% 50%) 50% / 20px 20px';
 
-export function PatternCanvas({ canvasRef }: PatternCanvasProps) {
+export function PatternCanvas() {
   const config = usePatternStore();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  // Watch the container and record its size whenever the window is resized
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setSize({ width, height });
+    });
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || size.width === 0) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // ... rest of the code stays the same
+    // Match the canvas to its on-screen size, with extra pixels for sharp screens
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(size.width * dpr);
+    canvas.height = Math.round(size.height * dpr);
+    ctx.scale(dpr, dpr);
 
-    // Set canvas size
-    canvas.width = 800;
-    canvas.height = 600;
-
-    // Clear canvas
-    ctx.fillStyle = config.backgroundColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw pattern
-    drawPattern(ctx, canvas.width, config);
-  }, [config, canvasRef]);
+    renderPattern(ctx, size.width, size.height, config);
+  }, [config, size]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="w-full h-full border border-gray-700 bg-black"
-    />
+    <div
+      ref={containerRef}
+      className="relative flex-1 min-h-0"
+      style={{ background: config.transparentBackground ? CHECKERBOARD : 'black' }}
+    >
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full"
+      />
+    </div>
   );
-}
-
-function drawPattern(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  config: PatternConfig
-) {
-  const cellSize = (width / config.gridMultiply) * (config.scale / 2);
-  const cols = config.gridMultiply;
-  const rows = config.gridMultiply;
-
-  ctx.strokeStyle = config.shapeColor;
-  ctx.lineWidth = 2;
-  ctx.filter = `blur(${config.blur}px)`;
-
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const x = col * cellSize + (row % 2) * config.gridOffset.x;
-      const y = row * cellSize + (row % 2) * config.gridOffset.y;
-
-      ctx.save();
-      ctx.translate(x + cellSize / 2, y + cellSize / 2);
-      ctx.rotate((config.rotation * Math.PI) / 180);
-      ctx.scale(config.stretch.x, config.stretch.y);
-      ctx.translate(-cellSize / 2, -cellSize / 2);
-
-      drawShape(ctx, config.baseShape, cellSize);
-
-      ctx.restore();
-    }
-  }
-}
-
-function drawShape(
-  ctx: CanvasRenderingContext2D,
-  shape: string,
-  size: number
-) {
-  const padding = 5;
-  const x = padding;
-  const y = padding;
-  const w = size - padding * 2;
-  const h = size - padding * 2;
-
-  ctx.beginPath();
-
-  switch (shape) {
-    case 'line':
-      ctx.moveTo(x, y + h / 2);
-      ctx.lineTo(x + w, y + h / 2);
-      break;
-
-    case 'plus':
-      ctx.moveTo(x + w / 2, y);
-      ctx.lineTo(x + w / 2, y + h);
-      ctx.moveTo(x, y + h / 2);
-      ctx.lineTo(x + w, y + h / 2);
-      break;
-
-    case 'asterisk':
-      for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI;
-        const x1 = x + w / 2 + Math.cos(angle) * (w / 2);
-        const y1 = y + h / 2 + Math.sin(angle) * (h / 2);
-        if (i === 0) ctx.moveTo(x1, y1);
-        else ctx.lineTo(x1, y1);
-      }
-      break;
-
-    case '0':
-      ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
-      break;
-
-    case '1':
-      ctx.font = `bold ${h}px monospace`;
-      ctx.fillStyle = ctx.strokeStyle;
-      ctx.fillText('1', x, y + h);
-      break;
-  }
-
-  ctx.stroke();
 }

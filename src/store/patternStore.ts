@@ -11,8 +11,13 @@ const defaultConfig: PatternConfig = {
   rotation: 0,
   scale: 1,
   stretch: { x: 1, y: 1 },
+  lineWidth: 2,
+  dashed: false,
+  dashLength: 10,
+  dashGap: 5,
   shapeColor: '#ffffff',
   backgroundColor: '#000000',
+  transparentBackground: false,
   blur: 0,
   distortion: 0,
 };
