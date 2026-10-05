@@ -2,14 +2,10 @@
 // (preview and PNG export) or as SVG text (SVG export), so all of them always match.
 
 import type { PatternConfig } from '../types/pattern';
+import { getShapeParts, type ShapePart } from './shapes';
 
 // Grid Multiply = how many cells fit across this many pixels (5 → 200px cells)
 const REFERENCE_WIDTH = 1000;
-
-// The building blocks every shape is made of
-type ShapePart =
-  | { kind: 'line'; x1: number; y1: number; x2: number; y2: number }
-  | { kind: 'ellipse'; cx: number; cy: number; rx: number; ry: number; rotation: number };
 
 // Every copy of the shape in the pattern, each as a list of parts in final page positions.
 // Rotation and Scale are already applied to the positions, so the outline drawn around them
@@ -32,8 +28,11 @@ function getPatternShapes(width: number, height: number, config: PatternConfig):
   const scaleX = config.scale * config.stretch.x;
   const scaleY = config.scale * config.stretch.y;
 
-  // The shape, drawn once inside a single cell
-  const parts = getShapeParts(config.baseShape, cellSize);
+  // Each selected shape, drawn once inside a single cell
+  const partsByShape = config.shapes.map((shape) => getShapeParts(shape, cellSize));
+  // Combine mode: every shape's parts together in one list
+  const combinedParts = partsByShape.flat();
+  const alternating = config.shapeMode === 'alternate' && partsByShape.length > 1;
 
   const shapes: ShapePart[][] = [];
   // Start one cell before the edge and end one after, so offsets and rotation never leave gaps
@@ -50,6 +49,10 @@ function getPatternShapes(width: number, height: number, config: PatternConfig):
         const sy = (y - half) * scaleY;
         return { x: centerX + sx * cos - sy * sin, y: centerY + sx * sin + sy * cos };
       };
+
+      const parts = alternating
+        ? partsByShape[pickShapeIndex(row, col, config)]
+        : combinedParts;
 
       shapes.push(
         parts.map((part): ShapePart => {
@@ -75,47 +78,33 @@ function getPatternShapes(width: number, height: number, config: PatternConfig):
   return shapes;
 }
 
-function getShapeParts(shape: PatternConfig['baseShape'], size: number): ShapePart[] {
-  const padding = 5;
-  const x = padding;
-  const y = padding;
-  const w = size - padding * 2;
-  const h = size - padding * 2;
-  const centerX = x + w / 2;
-  const centerY = y + h / 2;
+// In Alternate mode, decides which selected shape goes in the cell at this row and column.
+// It only looks at the cell's grid position, so the layout is the same on every screen.
+function pickShapeIndex(row: number, col: number, config: PatternConfig): number {
+  const count = config.shapes.length;
+  // Remainder that's never negative, so the extra row/column at -1 still cycles correctly
+  const wrap = (n: number) => ((n % count) + count) % count;
 
-  switch (shape) {
-    case 'line':
-      return [{ kind: 'line', x1: x, y1: centerY, x2: x + w, y2: centerY }];
-
-    case 'plus':
-      return [
-        { kind: 'line', x1: centerX, y1: y, x2: centerX, y2: y + h },
-        { kind: 'line', x1: x, y1: centerY, x2: x + w, y2: centerY },
-      ];
-
-    case 'asterisk': {
-      // Three separate lines through the center, 60° apart, make a six-armed asterisk
-      const lines = 3;
-      const parts: ShapePart[] = [];
-      for (let i = 0; i < lines; i++) {
-        const angle = Math.PI / 2 + (i * Math.PI) / lines;
-        const dx = Math.cos(angle) * (w / 2);
-        const dy = Math.sin(angle) * (h / 2);
-        parts.push({
-          kind: 'line',
-          x1: centerX - dx,
-          y1: centerY - dy,
-          x2: centerX + dx,
-          y2: centerY + dy,
-        });
-      }
-      return parts;
-    }
-
-    case 'circle':
-      return [{ kind: 'ellipse', cx: centerX, cy: centerY, rx: w / 2, ry: h / 2, rotation: 0 }];
+  switch (config.alternatePattern) {
+    case 'cell':
+      return wrap(row + col);
+    case 'row':
+      return wrap(row);
+    case 'column':
+      return wrap(col);
+    case 'random':
+      return Math.floor(cellRandom(row, col, config.seed) * count);
   }
+}
+
+// A "random" number from 0 up to (not including) 1 that's always the same for the same
+// row, column and seed. It scrambles the three numbers together with multiplication and
+// bit shifting, so neighbouring cells get unrelated results.
+function cellRandom(row: number, col: number, seed: number): number {
+  let h = Math.imul(row, 73856093) ^ Math.imul(col, 19349663) ^ Math.imul(seed, 83492791);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
 }
 
 // ---------- Canvas (preview and PNG) ----------

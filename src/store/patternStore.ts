@@ -5,7 +5,10 @@ import type { PatternState, PatternConfig } from '../types/pattern';
 
 // these are the values users see before they change anything
 const defaultConfig: PatternConfig = {
-  baseShape: 'line',
+  shapes: ['line'],
+  shapeMode: 'combine',
+  alternatePattern: 'cell',
+  seed: 1,
   gridMultiply: 5,
   gridOffset: { x: 0, y: 0 },
   rotation: 0,
@@ -24,12 +27,6 @@ const defaultConfig: PatternConfig = {
 
 export const usePatternStore = create<PatternState>((set) => ({
   ...defaultConfig,
-  
-  updateConfig: (key, value) =>
-    set((state) => ({
-      ...state,
-      [key]: value,
-    })),
-  
+  updateConfig: (key, value) => set({ [key]: value }),
   resetToDefaults: () => set(defaultConfig),
 }));

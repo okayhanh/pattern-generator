@@ -4,6 +4,7 @@ import { Slider } from './components/Controls/Slider';
 import { ColorPicker } from './components/Controls/ColorPicker';
 import { Checkbox } from './components/Controls/Checkbox';
 import { ExportControls } from './components/Controls/ExportControls';
+import { ResetButton } from './components/Controls/ResetButton';
 import { usePatternStore } from './store/patternStore';
 
 export default function App() {
@@ -31,7 +32,7 @@ export default function App() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden gap-6 p-6" style={{ display: 'flex', flexDirection: 'row' }}>
+      <div className="flex-1 flex overflow-hidden gap-6 p-6">
         {/* Sidebar Controls */}
         <div className="w-64 bg-gray-800 rounded-lg overflow-y-auto border border-gray-700">
           <ShapeSelector />
@@ -126,6 +127,10 @@ export default function App() {
               checked={transparentBackground}
               onChange={(val) => updateConfig('transparentBackground', val)}
             />
+          </div>
+
+          <div className="p-4">
+            <ResetButton />
           </div>
         </div>
 
